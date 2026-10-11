@@ -1,0 +1,3 @@
+# Preview of a proposed website. Not the official site. Do not index.
+User-agent: *
+Disallow: /
