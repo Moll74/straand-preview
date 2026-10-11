@@ -25,7 +25,7 @@
 
   /* header: fixed and always visible (Bigum: fixed menu); turns solid after the hero */
   const hdr = $('#hdr');
-  const onScroll = () => { const hero = $('#hero'); hdr.classList.toggle('solid', !hero || scrollY > hero.offsetHeight - 90); };
+  const onScroll = () => { const hero = $('#hero'); hdr.classList.toggle('solid', !hero || scrollY > (matchMedia('(max-width: 820px)').matches ? 40 : hero.offsetHeight - 90)); };   // phones: solid as soon as the page moves, so the hero text never shows through
   addEventListener('scroll', onScroll, { passive: true }); onScroll();
 
   /* booking forms (hero bar + dialog on every page) -> SynXis with dates and guests */

@@ -21,7 +21,7 @@
      Stops for the rest of the visit once the guest opens the concierge or closes the bubble. */
   const tease = document.getElementById('tease'), reduceM = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const ss = k => { try { return sessionStorage.getItem(k); } catch (e) { return null; } }, sset = k => { try { sessionStorage.setItem(k, '1'); } catch (e) {} };
-  let quiet = !!ss('st-concierge-quiet'), tq = 0, timer = null;
+  let quiet = !!ss('st-concierge-quiet') || matchMedia('(max-width: 820px)').matches, tq = 0, timer = null;   // phones: no pop-up bubble, the concierge sits in the bottom bar
   const hush = () => { quiet = true; sset('st-concierge-quiet'); btn.classList.remove('nudge'); tease.hidden = true; tease.classList.remove('on'); clearInterval(timer); };
   if (!quiet) {
     if (!reduceM) btn.classList.add('nudge');
