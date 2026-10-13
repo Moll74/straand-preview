@@ -23,6 +23,18 @@
   burger?.addEventListener('click', () => menu(burger.getAttribute('aria-expanded') !== 'true'));
   mnav?.addEventListener('click', e => { if (e.target.closest('a')) menu(false); });
 
+  /* long pages on phones: card texts show four lines with 'Les mer' (everything stays on the page, one tap away) */
+  if (document.querySelector('.jump') && matchMedia('(max-width: 760px)').matches) {
+    const L = (document.documentElement.lang || 'nb').startsWith('nb') ? 'nb' : 'en';
+    $$('.scard > div p').forEach(p => { if (p.closest('.btn') || p.querySelector('.btn')) return;
+      p.classList.add('clamp'); if (p.scrollHeight <= p.clientHeight + 4) { p.classList.remove('clamp'); return; }
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'more-b'; b.textContent = L === 'nb' ? 'Vis mer' : 'Show more'; b.setAttribute('aria-expanded', 'false');
+      b.addEventListener('click', () => { const o = p.classList.toggle('clamp'); b.textContent = o ? (L === 'nb' ? 'Vis mer' : 'Show more') : (L === 'nb' ? 'Vis mindre' : 'Show less'); b.setAttribute('aria-expanded', String(!o)); });
+      p.after(b); });
+  }
+  /* the header's real height, for things that stick just below it (the jump links on long pages) */
+  const hdrH = () => { const h = document.querySelector('.hdr'); if (h) document.documentElement.style.setProperty('--hdrh', Math.round(h.getBoundingClientRect().bottom) + 'px'); };
+  hdrH(); addEventListener('resize', hdrH); addEventListener('load', hdrH);
   /* header: fixed and always visible (Bigum: fixed menu); turns solid after the hero */
   const hdr = $('#hdr');
   const onScroll = () => { const hero = $('#hero'); hdr.classList.toggle('solid', !hero || scrollY > (matchMedia('(max-width: 820px)').matches ? 40 : hero.offsetHeight - 90)); };   // phones: solid as soon as the page moves, so the hero text never shows through
@@ -63,9 +75,11 @@
   sIn?.addEventListener('input', () => {
     const q = fold(sIn.value).split(/\s+/).filter(w => w.length > 1);
     if (!q.length) { sR.innerHTML = ''; sNone.hidden = true; return; }
-    const hits = (window.SEARCH || []).map(it => { const t = fold(it.t), x = fold(it.x); let s = 0;
-      for (const w of q) { if (t.includes(w)) s += 3; else if (x.includes(w)) s += 1; else return null; } return [s, it]; })
-      .filter(Boolean).sort((a, b) => b[0] - a[0]).slice(0, 8);
+    // every word in the title or text first; if nothing has them all ('julebord pris', 'opening hours'), the pages with the most of them
+    const scored = (window.SEARCH || []).map(it => { const t = fold(it.t), x = fold(it.x + ' ' + it.k + ' ' + it.u.replace(/[\/-]/g, ' ')); let s = 0, n = 0;
+      for (const w of q) { if (t.includes(w)) { s += 3; n++; } else if (x.includes(w)) { s += 1; n++; } } return n ? [n, s, it] : null; }).filter(Boolean);
+    const all = scored.filter(h => h[0] === q.length);
+    const hits = (all.length ? all : scored).sort((a, b) => b[0] - a[0] || b[1] - a[1]).slice(0, 8).map(h => [h[1], h[2]]);
     sR.innerHTML = hits.map(([, it]) => `<li><a href="${it.u}"><small>${it.k}</small><b>${it.t}</b><span>${it.x.slice(0, 110)}${it.x.length > 110 ? '…' : ''}</span></a></li>`).join('');
     sNone.hidden = hits.length > 0;
     dataLayer.push({ event: 'search', q: sIn.value.slice(0, 60), hits: hits.length });

@@ -97,6 +97,28 @@
     if (AR.length && /buss|\bbus\b|kollektiv|public transport/.test(f)) return [nb ? 'Bussholdeplassen «Straand» ligger rett ved hotellet. Ruter og tider finner du hos Entur (entur.no).' : 'The bus stop "Straand" is right next to the hotel. Routes and times are on Entur (entur.no).', ['parkmap'], plist(pick('BUS'))];
     if (here && /adresse|address|hvor ligger|where is|veibeskriv|direction|kjore til|finne fram|get there|komme meg|kommer jeg/.test(f))
       return [(nb ? 'Vi ligger i ' : 'We are at ') + k.address + (nb ? ', i nordenden av Nisser. Gratis parkering rett ved hotellet.' : ', at the northern end of Lake Nisser. Free parking next to the hotel.'), ['map', 'parkmap']];
+    // opening hours: answer from the hotel's own times, not the nearest FAQ
+    if (/(^|\s)(apen|apent|apne|apner|open|opens|opening|apningstid\w*|hours|nar|when|tider|serveres|served)\b/.test(f)) {
+      const H = [[/frokost|breakfast/, 'breakfast'], [/lunsj|lunch/, 'lunch'], [/afternoon|(^|\s)te\b|(^|\s)tea\b/, 'tea'], [/strandbar|beach/, 'beach'],
+                 [/(^|\s)bar\b|frambar|fram bar|pianobar/, 'bar'], [/basseng|svomm|pool|swim|badstu|sauna/, 'pool'], [/resepsjon|reception/, 'reception'], [/ms fram|(^|\s)fram\b|bat|boat/, 'fram']];
+      const hit = H.filter(([rx, key]) => rx.test(f) && t[key]).map(([, key]) => t[key]);
+      if (hit.length) return [hit.join(' '), ['call']];
+      if (/restaurant|middag|dinner|spise|eat|mat\b|food/.test(f))
+        return [(nb ? 'Frokost: ' : 'Breakfast: ') + t.breakfast + '. ' + (nb ? 'Lunsj: ' : 'Lunch: ') + t.lunch + '. ' + (nb ? 'Middag: ' : 'Dinner: ') + t.dinner + '.', ['eat', 'call']];
+    }
+    // prices the pages state: packages and julebord ('hva koster alpinpakken?', 'julebord pris')
+    if (/pris|koster|(^|\s)kost\b|price|cost|how much|hvor mye/.test(f) && (k.prods || []).length) {
+      const words = x => fold(x).split(/[^a-z0-9]+/).filter(w => w.length > 2);   // plain words: the synonym list would match unrelated packages
+      const qw = words(q).filter(w => !/^(pris|prisen|priser|koster|kost|price|prices|cost|costs|much|mye|hvor|what|hva|does|the|for|per|med|with|and|og|det|den|dere|you)$/.test(w));
+      let bp = null, bs = 0;
+      for (const p of k.prods) { const pw = words(p.n + ' ' + p.t); let s2 = 0;
+        for (const w of qw) { if (pw.includes(w) || (w.length > 5 && pw.some(x => x.length > 5 && x.slice(0, 6) === w.slice(0, 6)))) s2 += 2; }   // whole word, or the same first six letters (alpinpakken = alpinpakke)
+        if (s2 > bs) { bs = s2; bp = p; } }
+      if (bp && bs >= 2) {
+        return [bp.x || ((nb ? `${bp.n}: fra kr ${bp.p.toLocaleString('nb-NO')} per person. Se siden for hva som er inkludert: ` : `${bp.n}: from NOK ${bp.p.toLocaleString('en-GB')} per person. See the page for what is included: `) + location.origin + bp.u), bp.x ? ['events', 'call'] : ['book', 'call']];
+      }
+      if (!/(^|\s)(rom|rommet|rommene|room|rooms|overnatting|natt|netter|night|nights|stay|opphold|book|bestill|ledig|availab)\b/.test(f) && qw.length) return null;   // a price we do not have: reception answers, never the room-rate reply
+    }
     const topic = /julebord|christmas|festival|bryllup|wedding|konferanse|conference|kurs\b|meeting|selskap|party/.test(f);   // named events go to the knowledge base
     if (!topic && /pris|koster|(^|\s)kost\b|price|cost|(^|\s)rates?\b|tilbud|deal|ledig|availab|book|bestill/.test(f) && !/(^|\s)(bord|bordet|table)\b/.test(f))
       return [nb ? 'Prisen avhenger av datoer og romtype. Velg datoer, så ser du ledige rom og dagens priser i bookingen. Bestiller du direkte hos oss, kan du avbestille til kl. 14.00 dagen før ankomst.'
